@@ -3,151 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSON Viewer & Formatter</title>
+    <title>Pro JSON Viewer</title>
     <style>
         :root {
-            --bg-color: #1e1e1e;
-            --panel-bg: #252526;
-            --text-color: #d4d4d4;
-            --accent-color: #007acc;
-            --border-color: #3e3e42;
-            --string-color: #ce9178;
-            --number-color: #b5cea8;
-            --boolean-color: #569cd6;
-            --key-color: #9cdcfe;
-            --null-color: #569cd6;
+            --bg-dark: #1e1e1e;
+            --bg-panel: #252526;
+            --bg-hover: #2a2d2e;
+            --text-main: #d4d4d4;
+            --text-dim: #858585;
+            --accent: #3794ff;
+            --border: #3e3e42;
+            
+            /* Syntax Colors */
+            --c-string: #ce9178;
+            --c-number: #b5cea8;
+            --c-bool: #569cd6;
+            --c-key: #9cdcfe;
+            --c-null: #569cd6;
+            
+            --indent-guide: #404040;
         }
 
+        * { box-sizing: border-box; outline: none; }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             margin: 0;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            height: 100vh;
             overflow: hidden;
         }
 
+        /* --- Header & Toolbar --- */
         header {
-            background-color: #333333;
-            padding: 10px 20px;
+            background-color: #2d2d2d;
+            padding: 0 15px;
+            height: 50px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid var(--border-color);
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
         }
 
-        h1 { margin: 0; font-size: 1.2rem; }
+        h1 { font-size: 16px; font-weight: 600; color: #fff; letter-spacing: 0.5px; }
 
-        .toolbar { display: flex; gap: 10px; }
+        .toolbar { display: flex; gap: 8px; }
 
         button {
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 8px 16px;
+            background-color: #3e3e42;
+            color: #ccc;
+            border: 1px solid transparent;
+            padding: 6px 12px;
             cursor: pointer;
-            border-radius: 3px;
-            font-size: 0.9rem;
-            transition: background 0.2s;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.2s;
+            font-weight: 500;
         }
 
-        button:hover { background-color: #005f9e; }
-        button.secondary { background-color: #444; }
-        button.secondary:hover { background-color: #555; }
+        button:hover { background-color: #4e4e52; color: white; }
+        button.primary { background-color: var(--accent); color: white; }
+        button.primary:hover { background-color: #0069d1; }
 
-        .main-container {
-            display: flex;
-            flex: 1;
-            height: 100%;
-        }
-
-        .panel {
+        /* --- Layout --- */
+        .container { display: flex; flex: 1; height: calc(100vh - 50px); }
+        
+        .pane {
             flex: 1;
             display: flex;
             flex-direction: column;
-            padding: 10px;
-            border-right: 1px solid var(--border-color);
-            min-width: 0; /* Prevent flex overflow */
+            min-width: 0;
+            position: relative;
         }
 
-        .panel:last-child { border-right: none; }
+        .pane-header {
+            background: #252526;
+            padding: 8px 15px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+        }
 
+        .pane-left { border-right: 1px solid var(--border); }
+
+        /* --- Input Area --- */
         textarea {
             flex: 1;
-            background-color: var(--panel-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            border: none;
+            padding: 15px;
             resize: none;
-            padding: 10px;
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
-            outline: none;
+            font-size: 13px;
+            line-height: 1.5;
         }
+        textarea::placeholder { color: #555; }
 
+        /* --- Viewer Area --- */
         #viewer {
             flex: 1;
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            padding: 10px;
             overflow: auto;
+            padding: 15px;
+            background-color: var(--bg-dark);
             font-family: 'Consolas', 'Monaco', monospace;
             font-size: 14px;
+            line-height: 1.5;
         }
 
-        /* JSON Tree Styling */
-        .json-item { margin-left: 20px; }
-        .json-key { color: var(--key-color); }
-        .json-string { color: var(--string-color); }
-        .json-number { color: var(--number-color); }
-        .json-boolean { color: var(--boolean-color); }
-        .json-null { color: var(--null-color); }
+        /* --- JSON Tree UI Elements --- */
+        .json-row {
+            display: flex;
+            align-items: flex-start;
+            border-radius: 2px;
+        }
         
-        .collapsible { cursor: pointer; user-select: none; position: relative; }
-        .collapsible::before {
-            content: '▼';
-            font-size: 10px;
-            position: absolute;
-            left: -15px;
-            top: 4px;
-            color: #888;
+        /* Highlight line on hover for easier tracking */
+        .json-row:hover { background-color: var(--bg-hover); }
+
+        /* The toggle arrow area */
+        .toggle-btn {
+            width: 24px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-dim);
+            transition: color 0.2s;
         }
-        .collapsible.collapsed::before { content: '▶'; }
-        .collapsible.collapsed > .json-children { display: none; }
-        .collapsible.collapsed::after {
-            content: '...';
-            color: #888;
+        .toggle-btn:hover { color: #fff; }
+        
+        /* The arrow icon itself */
+        .arrow {
+            display: inline-block;
+            font-size: 10px;
+            transition: transform 0.15s ease;
+        }
+        .collapsed .arrow { transform: rotate(-90deg); }
+
+        /* Key / Value Styles */
+        .key { color: var(--c-key); cursor: pointer; }
+        .string { color: var(--c-string); white-space: pre-wrap; word-break: break-all; }
+        .number { color: var(--c-number); }
+        .boolean { color: var(--c-bool); }
+        .null { color: var(--c-null); }
+        .syntax { color: var(--text-main); }
+        
+        /* Object/Array Children Container */
+        .children {
+            margin-left: 10px;
+            padding-left: 10px;
+            border-left: 1px solid var(--indent-guide);
+            overflow: hidden;
+        }
+        
+        /* Hide children when collapsed */
+        .collapsed + .children { display: none; }
+        
+        /* Summary text (e.g. "Array(5)" shown when collapsed) */
+        .summary {
+            color: var(--text-dim);
+            font-style: italic;
             font-size: 12px;
-            margin-left: 5px;
+            margin-left: 8px;
+            display: none;
+            user-select: none;
+        }
+        .collapsed .summary { display: inline; }
+
+        /* Error Banner */
+        #errorBanner {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #5a1d1d;
+            color: #ffcccc;
+            padding: 10px 15px;
+            font-size: 13px;
+            border-top: 1px solid #ff4444;
+            display: none;
         }
 
-        .error-msg { color: #f48771; margin-top: 10px; display: none; }
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #424242; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4f4f4f; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>JSON Viewer</h1>
+    <h1>JSON<span style="color:var(--accent)">Viewer</span></h1>
     <div class="toolbar">
-        <button onclick="formatJson()">Format / View</button>
-        <button class="secondary" onclick="minifyJson()">Minify</button>
-        <button class="secondary" onclick="copyToClipboard()">Copy Output</button>
-        <button class="secondary" onclick="clearAll()">Clear</button>
+        <button onclick="expandAll()">Expand All</button>
+        <button onclick="collapseAll()">Collapse All</button>
+        <button class="primary" onclick="processJson()">Format</button>
+        <button onclick="minifyJson()">Minify</button>
+        <button onclick="clearAll()">Clear</button>
     </div>
 </header>
 
-<div class="main-container">
-    <!-- Input Section -->
-    <div class="panel">
-        <label for="jsonInput" style="margin-bottom: 5px; display:block; font-weight:bold;">Input (Paste JSON here)</label>
-        <textarea id="jsonInput" placeholder='{"paste": "your json here"}'></textarea>
-        <div id="errorMsg" class="error-msg">Invalid JSON</div>
+<div class="container">
+    <!-- Input Panel -->
+    <div class="pane pane-left">
+        <div class="pane-header">
+            <span>Raw Input</span>
+            <span style="font-size:10px; opacity:0.7; cursor:pointer;" onclick="sampleJson()">Load Sample</span>
+        </div>
+        <textarea id="jsonInput" spellcheck="false" placeholder="Paste JSON here..."></textarea>
+        <div id="errorBanner"></div>
     </div>
 
-    <!-- Output Section -->
-    <div class="panel">
-        <label style="margin-bottom: 5px; display:block; font-weight:bold;">Viewer (Interactive)</label>
+    <!-- Output Panel -->
+    <div class="pane">
+        <div class="pane-header">Tree View</div>
         <div id="viewer"></div>
     </div>
 </div>
@@ -155,157 +238,299 @@
 <script>
     const input = document.getElementById('jsonInput');
     const viewer = document.getElementById('viewer');
-    const errorMsg = document.getElementById('errorMsg');
+    const errorBanner = document.getElementById('errorBanner');
 
-    // Load sample JSON on startup
-    window.onload = () => {
+    // Handle Tab key in textarea (developer friendly)
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            this.value = this.value.substring(0, start) + "  " + this.value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 2;
+        }
+    });
+
+    function sampleJson() {
         const sample = {
-            "app": "JSON Viewer",
-            "version": 1.0,
-            "features": ["Syntax Highlighting", "Collapsible Nodes", "Error Detection"],
-            "settings": {
-                "theme": "dark",
-                "editable": false
-            },
-            "user": null
+            "project": "UX Enhanced Viewer",
+            "active": true,
+            "metrics": { "speed": 98, "usability": 100 },
+            "users": [
+                { "id": 1, "name": "Alice", "roles": ["admin", "editor"] },
+                { "id": 2, "name": "Bob", "roles": ["viewer"] }
+            ],
+            "meta": null
         };
-        input.value = JSON.stringify(sample, null, 4);
-        formatJson();
-    };
+        input.value = JSON.stringify(sample, null, 2);
+        processJson();
+    }
+
+    function showError(msg) {
+        errorBanner.textContent = msg;
+        errorBanner.style.display = 'block';
+        input.style.backgroundColor = '#291b1b'; // Slight red tint
+    }
+
+    function clearError() {
+        errorBanner.style.display = 'none';
+        input.style.backgroundColor = 'var(--bg-dark)';
+    }
 
     function parseInput() {
+        const raw = input.value.trim();
+        if (!raw) return null;
         try {
-            const json = JSON.parse(input.value);
-            errorMsg.style.display = 'none';
-            input.style.borderColor = '#3e3e42';
-            return json;
+            const data = JSON.parse(raw);
+            clearError();
+            return data;
         } catch (e) {
-            errorMsg.innerText = "Error: " + e.message;
-            errorMsg.style.display = 'block';
-            input.style.borderColor = '#f48771';
-            return null;
+            showError("Invalid JSON: " + e.message);
+            return undefined;
         }
     }
 
-    function formatJson() {
-        const json = parseInput();
-        if (!json) return;
-
-        // Update the input to be pretty-printed as well
-        input.value = JSON.stringify(json, null, 4);
+    function processJson() {
+        const data = parseInput();
+        if (data === undefined) return; // Error state
         
-        // Clear viewer and build tree
+        // Auto-format input
+        if(data) input.value = JSON.stringify(data, null, 2);
+        
         viewer.innerHTML = '';
-        viewer.appendChild(buildTree(json));
+        if (data !== null) {
+            viewer.appendChild(buildNode(data));
+        } else if (input.value.trim() !== "") {
+            viewer.innerHTML = '<span class="null">null</span>';
+        }
     }
 
     function minifyJson() {
-        const json = parseInput();
-        if (!json) return;
-        input.value = JSON.stringify(json);
-        formatJson(); // Re-render tree but keep input minified? Usually user wants both. 
-        // Let's just update input for copy-paste purposes
+        const data = parseInput();
+        if (data !== undefined && data !== null) {
+            input.value = JSON.stringify(data);
+            processJson(); // Re-render tree
+        }
     }
 
     function clearAll() {
         input.value = '';
         viewer.innerHTML = '';
-        errorMsg.style.display = 'none';
+        clearError();
     }
 
-    async function copyToClipboard() {
-        try {
-            await navigator.clipboard.writeText(input.value);
-            alert('JSON copied to clipboard!');
-        } catch (err) {
-            alert('Failed to copy');
+    // --- Helpers for Expand/Collapse All ---
+    function expandAll() {
+        document.querySelectorAll('.toggle-row').forEach(el => el.classList.remove('collapsed'));
+    }
+
+    function collapseAll() {
+        document.querySelectorAll('.toggle-row').forEach(el => el.classList.add('collapsed'));
+    }
+
+    // --- Core Tree Builder ---
+
+    function buildNode(data, keyName = null, isLastItem = true) {
+        const type = typeof data;
+        const container = document.createElement('div');
+        container.className = 'node-container';
+
+        // 1. Handle Null
+        if (data === null) {
+            container.appendChild(createSimpleRow(keyName, 'null', 'null', isLastItem));
+            return container;
         }
-    }
 
-    // --- Core Recursive Logic for Tree View ---
+        // 2. Handle Primitives
+        if (type !== 'object') {
+            let valStr = JSON.stringify(data);
+            let valClass = type; // 'string', 'number', 'boolean'
+            container.appendChild(createSimpleRow(keyName, valStr, valClass, isLastItem));
+            return container;
+        }
 
-    function buildTree(data) {
-        if (data === null) return createSpan('null', 'json-null');
+        // 3. Handle Objects & Arrays (Recursive)
+        const isArray = Array.isArray(data);
+        const keys = Object.keys(data);
+        const isEmpty = keys.length === 0;
+        const openBracket = isArray ? '[' : '{';
+        const closeBracket = isArray ? ']' : '}';
+        const summaryText = isArray ? `Array(${keys.length})` : `{ ... }`;
+
+        // The Header Row (Toggle button + Key + Opening Bracket)
+        const row = document.createElement('div');
+        row.className = 'json-row toggle-row'; // toggle-row class used for state
         
-        switch (typeof data) {
-            case 'string':
-                return createSpan(`"${data}"`, 'json-string');
-            case 'number':
-                return createSpan(data, 'json-number');
-            case 'boolean':
-                return createSpan(data, 'json-boolean');
-            case 'object':
-                // Handles Arrays and Objects
-                const isArray = Array.isArray(data);
-                const container = document.createElement('div');
-                
-                // Toggle Button/Wrapper
-                const wrapper = document.createElement('div');
-                wrapper.className = 'collapsible';
-                
-                // Opening Brace/Bracket
-                const open = document.createElement('span');
-                open.innerText = isArray ? '[' : '{';
-                wrapper.appendChild(open);
-
-                // Children Container
-                const childrenContainer = document.createElement('div');
-                childrenContainer.className = 'json-children';
-
-                const keys = Object.keys(data);
-                keys.forEach((key, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'json-item';
-                    
-                    // If it's an object, print the key. If array, skip key.
-                    if (!isArray) {
-                        const keySpan = createSpan(`"${key}"`, 'json-key');
-                        item.appendChild(keySpan);
-                        item.appendChild(document.createTextNode(': '));
-                    }
-
-                    item.appendChild(buildTree(data[key]));
-
-                    // Add comma if not last item
-                    if (index < keys.length - 1) {
-                        item.appendChild(document.createTextNode(','));
-                    }
-                    
-                    childrenContainer.appendChild(item);
-                });
-
-                wrapper.appendChild(childrenContainer);
-
-                // Closing Brace/Bracket
-                const close = document.createElement('span');
-                close.innerText = isArray ? ']' : '}';
-                wrapper.appendChild(close);
-
-                // Click event to toggle
-                // Only make it collapsible if it has children
-                if (keys.length > 0) {
-                    wrapper.onclick = (e) => {
-                        e.stopPropagation(); // Prevent bubbling
-                        wrapper.classList.toggle('collapsed');
-                    };
-                } else {
-                    wrapper.classList.remove('collapsible'); // Remove arrow if empty
+        // Toggle Button
+        const toggleBtn = document.createElement('span');
+        toggleBtn.className = 'toggle-btn';
+        if (!isEmpty) {
+            toggleBtn.innerHTML = '<span class="arrow">▼</span>';
+            // Click handling logic
+            const toggleAction = (e) => {
+                e.stopPropagation();
+                row.classList.toggle('collapsed');
+            };
+            toggleBtn.onclick = toggleAction;
+            row.onclick = (e) => {
+                // Allow clicking the empty space or key to toggle
+                if(e.target === row || e.target.classList.contains('key') || e.target.classList.contains('syntax')) {
+                    toggleAction(e);
                 }
-
-                container.appendChild(wrapper);
-                return container;
-                
-            default:
-                return document.createTextNode(data);
+            };
+        } else {
+            toggleBtn.innerHTML = ''; // No arrow for empty
+            row.style.cursor = 'default';
         }
+        row.appendChild(toggleBtn);
+
+        // Key (if exists)
+        if (keyName) {
+            const keySpan = document.createElement('span');
+            keySpan.className = 'key';
+            keySpan.textContent = `"${keyName}": `;
+            row.appendChild(keySpan);
+        }
+
+        // Opening Bracket
+        const startBracket = document.createElement('span');
+        startBracket.className = 'syntax';
+        startBracket.textContent = openBracket;
+        row.appendChild(startBracket);
+
+        // Summary (hidden unless collapsed)
+        if (!isEmpty) {
+            const summary = document.createElement('span');
+            summary.className = 'summary';
+            summary.textContent = summaryText;
+            row.appendChild(summary);
+        }
+
+        // Empty case handling
+        if (isEmpty) {
+            const endBracket = document.createElement('span');
+            endBracket.className = 'syntax';
+            endBracket.textContent = closeBracket + (isLastItem ? '' : ',');
+            row.appendChild(endBracket);
+            container.appendChild(row);
+            return container;
+        }
+
+        container.appendChild(row);
+
+        // Children Container
+        const childrenDiv = document.createElement('div');
+        childrenDiv.className = 'children';
+        
+        keys.forEach((k, index) => {
+            const childIsLast = index === keys.length - 1;
+            // Recursion
+            const childNode = buildNode(data[k], isArray ? null : k, childIsLast);
+            childrenDiv.appendChild(childNode);
+        });
+
+        container.appendChild(childrenDiv);
+
+        // Closing Bracket Row (Separate line)
+        const closeRow = document.createElement('div');
+        closeRow.className = 'json-row';
+        // Indent spacing for closing bracket to align with opening
+        const spacer = document.createElement('span');
+        spacer.className = 'toggle-btn'; 
+        closeRow.appendChild(spacer);
+        
+        const endBracket = document.createElement('span');
+        endBracket.className = 'syntax';
+        endBracket.textContent = closeBracket + (isLastItem ? '' : ',');
+        closeRow.appendChild(endBracket);
+        
+        // Hide closing row if collapsed (handled via CSS sibling selector usually, 
+        // but here we might need JS helper or nest it inside a wrapper. 
+        // To keep it simple, we will append it to container. 
+        // Note: The CSS `.collapsed + .children` hides children. 
+        // We need to hide the closing bracket too when collapsed.
+        
+        // Let's grouping children and closing bracket might be easier? 
+        // Actually, easiest way: put closing bracket IN children div? 
+        // No, indentation would be wrong.
+        // Solution: Toggle class on container, hide children AND closing row.
+        
+        // Let's adjust logic: 
+        // We will put the closing bracket row inside the children container but manipulate margin?
+        // Better: Just hide it via JS when toggling.
+        // Or simpler CSS: 
+        // .toggle-row.collapsed ~ .closing-row { display: none; }
+        
+        closeRow.classList.add('closing-row');
+        container.appendChild(closeRow);
+
+        // CSS fix for the specific structure:
+        // We need the CSS to know that if `row` is collapsed, `childrenDiv` AND `closeRow` are hidden.
+        // We can do this by wrapping them or using sibling selectors.
+        // Let's use a specific style injection for this logic.
+        // Revised CSS logic applied below via JS helper or just style.
+        
+        // Let's use a wrapper for the collapsible content
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'collapsible-content';
+        contentWrapper.appendChild(childrenDiv);
+        contentWrapper.appendChild(closeRow);
+        container.appendChild(contentWrapper);
+        
+        // Update click handler to toggle the wrapper
+        // Redefine the click logic from above
+        if (!isEmpty) {
+             const toggleAction = (e) => {
+                e.stopPropagation();
+                row.classList.toggle('collapsed');
+                contentWrapper.style.display = row.classList.contains('collapsed') ? 'none' : 'block';
+            };
+            // Re-bind
+            toggleBtn.onclick = toggleAction;
+            row.onclick = (e) => {
+                if(e.target === row || e.target.classList.contains('key') || e.target.classList.contains('syntax')) {
+                    toggleAction(e);
+                }
+            };
+        }
+
+        return container;
     }
 
-    function createSpan(text, className) {
-        const span = document.createElement('span');
-        span.innerText = text;
-        span.className = className;
-        return span;
+    function createSimpleRow(key, value, typeClass, isLast) {
+        const row = document.createElement('div');
+        row.className = 'json-row';
+        
+        // Spacer for alignment (where arrow usually is)
+        const spacer = document.createElement('span');
+        spacer.className = 'toggle-btn';
+        row.appendChild(spacer);
+
+        if (key) {
+            const keySpan = document.createElement('span');
+            keySpan.className = 'key';
+            keySpan.textContent = `"${key}": `;
+            row.appendChild(keySpan);
+        }
+
+        const valSpan = document.createElement('span');
+        valSpan.className = typeClass;
+        valSpan.textContent = value;
+        row.appendChild(valSpan);
+
+        if (!isLast) {
+            const comma = document.createElement('span');
+            comma.className = 'syntax';
+            comma.textContent = ',';
+            row.appendChild(comma);
+        }
+
+        return row;
     }
+
+    // Initialize
+    window.onload = sampleJson;
+
 </script>
 
 </body>
