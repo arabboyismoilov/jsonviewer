@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Viewer & Formatter</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --panel-bg: #252526;
+            --text-color: #d4d4d4;
+            --accent-color: #007acc;
+            --border-color: #3e3e42;
+            --string-color: #ce9178;
+            --number-color: #b5cea8;
+            --boolean-color: #569cd6;
+            --key-color: #9cdcfe;
+            --null-color: #569cd6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: #333333;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 { margin: 0; font-size: 1.2rem; }
+
+        .toolbar { display: flex; gap: 10px; }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        button:hover { background-color: #005f9e; }
+        button.secondary { background-color: #444; }
+        button.secondary:hover { background-color: #555; }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            height: 100%;
+        }
+
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            border-right: 1px solid var(--border-color);
+            min-width: 0; /* Prevent flex overflow */
+        }
+
+        .panel:last-child { border-right: none; }
+
+        textarea {
+            flex: 1;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            resize: none;
+            padding: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            outline: none;
+        }
+
+        #viewer {
+            flex: 1;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            overflow: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+        }
+
+        /* JSON Tree Styling */
+        .json-item { margin-left: 20px; }
+        .json-key { color: var(--key-color); }
+        .json-string { color: var(--string-color); }
+        .json-number { color: var(--number-color); }
+        .json-boolean { color: var(--boolean-color); }
+        .json-null { color: var(--null-color); }
+        
+        .collapsible { cursor: pointer; user-select: none; position: relative; }
+        .collapsible::before {
+            content: '▼';
+            font-size: 10px;
+            position: absolute;
+            left: -15px;
+            top: 4px;
+            color: #888;
+        }
+        .collapsible.collapsed::before { content: '▶'; }
+        .collapsible.collapsed > .json-children { display: none; }
+        .collapsible.collapsed::after {
+            content: '...';
+            color: #888;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .error-msg { color: #f48771; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>JSON Viewer</h1>
+    <div class="toolbar">
+        <button onclick="formatJson()">Format / View</button>
+        <button class="secondary" onclick="minifyJson()">Minify</button>
+        <button class="secondary" onclick="copyToClipboard()">Copy Output</button>
+        <button class="secondary" onclick="clearAll()">Clear</button>
+    </div>
+</header>
+
+<div class="main-container">
+    <!-- Input Section -->
+    <div class="panel">
+        <label for="jsonInput" style="margin-bottom: 5px; display:block; font-weight:bold;">Input (Paste JSON here)</label>
+        <textarea id="jsonInput" placeholder='{"paste": "your json here"}'></textarea>
+        <div id="errorMsg" class="error-msg">Invalid JSON</div>
+    </div>
+
+    <!-- Output Section -->
+    <div class="panel">
+        <label style="margin-bottom: 5px; display:block; font-weight:bold;">Viewer (Interactive)</label>
+        <div id="viewer"></div>
+    </div>
+</div>
+
+<script>
+    const input = document.getElementById('jsonInput');
+    const viewer = document.getElementById('viewer');
+    const errorMsg = document.getElementById('errorMsg');
+
+    // Load sample JSON on startup
+    window.onload = () => {
+        const sample = {
+            "app": "JSON Viewer",
+            "version": 1.0,
+            "features": ["Syntax Highlighting", "Collapsible Nodes", "Error Detection"],
+            "settings": {
+                "theme": "dark",
+                "editable": false
+            },
+            "user": null
+        };
+        input.value = JSON.stringify(sample, null, 4);
+        formatJson();
+    };
+
+    function parseInput() {
+        try {
+            const json = JSON.parse(input.value);
+            errorMsg.style.display = 'none';
+            input.style.borderColor = '#3e3e42';
+            return json;
+        } catch (e) {
+            errorMsg.innerText = "Error: " + e.message;
+            errorMsg.style.display = 'block';
+            input.style.borderColor = '#f48771';
+            return null;
+        }
+    }
+
+    function formatJson() {
+        const json = parseInput();
+        if (!json) return;
+
+        // Update the input to be pretty-printed as well
+        input.value = JSON.stringify(json, null, 4);
+        
+        // Clear viewer and build tree
+        viewer.innerHTML = '';
+        viewer.appendChild(buildTree(json));
+    }
+
+    function minifyJson() {
+        const json = parseInput();
+        if (!json) return;
+        input.value = JSON.stringify(json);
+        formatJson(); // Re-render tree but keep input minified? Usually user wants both. 
+        // Let's just update input for copy-paste purposes
+    }
+
+    function clearAll() {
+        input.value = '';
+        viewer.innerHTML = '';
+        errorMsg.style.display = 'none';
+    }
+
+    async function copyToClipboard() {
+        try {
+            await navigator.clipboard.writeText(input.value);
+            alert('JSON copied to clipboard!');
+        } catch (err) {
+            alert('Failed to copy');
+        }
+    }
+
+    // --- Core Recursive Logic for Tree View ---
+
+    function buildTree(data) {
+        if (data === null) return createSpan('null', 'json-null');
+        
+        switch (typeof data) {
+            case 'string':
+                return createSpan(`"${data}"`, 'json-string');
+            case 'number':
+                return createSpan(data, 'json-number');
+            case 'boolean':
+                return createSpan(data, 'json-boolean');
+            case 'object':
+                // Handles Arrays and Objects
+                const isArray = Array.isArray(data);
+                const container = document.createElement('div');
+                
+                // Toggle Button/Wrapper
+                const wrapper = document.createElement('div');
+                wrapper.className = 'collapsible';
+                
+                // Opening Brace/Bracket
+                const open = document.createElement('span');
+                open.innerText = isArray ? '[' : '{';
+                wrapper.appendChild(open);
+
+                // Children Container
+                const childrenContainer = document.createElement('div');
+                childrenContainer.className = 'json-children';
+
+                const keys = Object.keys(data);
+                keys.forEach((key, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'json-item';
+                    
+                    // If it's an object, print the key. If array, skip key.
+                    if (!isArray) {
+                        const keySpan = createSpan(`"${key}"`, 'json-key');
+                        item.appendChild(keySpan);
+                        item.appendChild(document.createTextNode(': '));
+                    }
+
+                    item.appendChild(buildTree(data[key]));
+
+                    // Add comma if not last item
+                    if (index < keys.length - 1) {
+                        item.appendChild(document.createTextNode(','));
+                    }
+                    
+                    childrenContainer.appendChild(item);
+                });
+
+                wrapper.appendChild(childrenContainer);
+
+                // Closing Brace/Bracket
+                const close = document.createElement('span');
+                close.innerText = isArray ? ']' : '}';
+                wrapper.appendChild(close);
+
+                // Click event to toggle
+                // Only make it collapsible if it has children
+                if (keys.length > 0) {
+                    wrapper.onclick = (e) => {
+                        e.stopPropagation(); // Prevent bubbling
+                        wrapper.classList.toggle('collapsed');
+                    };
+                } else {
+                    wrapper.classList.remove('collapsible'); // Remove arrow if empty
+                }
+
+                container.appendChild(wrapper);
+                return container;
+                
+            default:
+                return document.createTextNode(data);
+        }
+    }
+
+    function createSpan(text, className) {
+        const span = document.createElement('span');
+        span.innerText = text;
+        span.className = className;
+        return span;
+    }
+</script>
+
+</body>
+</html>
